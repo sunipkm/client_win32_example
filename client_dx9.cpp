@@ -38,15 +38,22 @@ DWORD WINAPI RecvFcn(LPVOID _in)
     ZeroMemory(recv_buf, sizeof(recv_buf));
     while (!done)
     {
-        if (conn_rdy)
+        struct pollfd pfd;
+        pfd.fd = *(SOCKET *)_in;
+        pfd.events = POLLIN;
+        int pollret = WSAPoll(&pfd, 1, 16);
+        if (pollret > 0)
         {
-            SOCKET sock = *(SOCKET *)_in;
             char msg_sz = 0;
-            int sz = recv(sock, &msg_sz, 1, 0);
+            int sz = recv(pfd.fd, &msg_sz, 1, 0);
             if (sz > 0)
-                sz = recv(sock, recv_buf, msg_sz, MSG_WAITALL);
+                sz = recv(pfd.fd, recv_buf, msg_sz, MSG_WAITALL);
         }
-        Sleep(16); // 16 ms sleep
+        else
+        {
+            printf("Poll: %d\n", pollret);
+            Sleep(16);
+        }
     }
     return NULL;
 }
